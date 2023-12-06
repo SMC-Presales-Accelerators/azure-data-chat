@@ -17,6 +17,11 @@
             "defaultValue": ""
         },
         {
+            "name": "database_name",
+            "description": "Database name being used to generate the query",
+            "defaultValue": ""
+        },
+        {
             "name": "table_descritpions",
             "description": "List of tables and columns, One table per line, CSV column list in () to use for your query generation",
             "defaultValue": ""
