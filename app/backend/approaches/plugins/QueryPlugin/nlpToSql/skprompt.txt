@@ -2,4 +2,5 @@
 #
 {{$table_descriptions}}
 #
+### The database name is: {{$database_name}}
 ### Provide the SQL Server query surrounded by <<< >>> to find {{$input}}

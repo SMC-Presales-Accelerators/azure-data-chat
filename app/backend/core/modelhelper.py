@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tiktoken
+import re
 
 MODELS_2_TOKEN_LIMITS = {
     "gpt-35-turbo": 4000,
@@ -19,6 +20,10 @@ def get_token_limit(model_id: str) -> int:
         raise ValueError("Expected model gpt-35-turbo and above")
     return MODELS_2_TOKEN_LIMITS[model_id]
 
+def get_database_name(connection_string: str) -> str:
+    regex = re.compile(r"Database=(.*?);", re.DOTALL)
+    database_name = re.search(regex, connection_string).group(1)
+    return database_name
 
 def num_tokens_from_messages(message: dict[str, str], model: str) -> int:
     """

@@ -11,6 +11,7 @@ import pyodbc
 from approaches.approach import Approach
 from core.messagebuilder import MessageBuilder
 from core.modelhelper import get_token_limit
+from core.modelhelper import get_database_name
 from text import nonewlines
 
 class ChatReadRetrieveReadApproach(Approach):
@@ -58,6 +59,7 @@ class ChatReadRetrieveReadApproach(Approach):
         self.chatgpt_model = chatgpt_model
         self.connection_string = connection_string
         self.chatgpt_token_limit = get_token_limit(chatgpt_model)
+        self.database_name = get_database_name(connection_string)
 
     async def schema_detect(self) -> str:
         conn = pyodbc.connect(self.connection_string)
@@ -176,6 +178,7 @@ class ChatReadRetrieveReadApproach(Approach):
         nlp_variables = sk.ContextVariables()
         nlp_variables["input"] = original_user_query
         nlp_variables["table_descriptions"] = await self.schema_detect()
+        nlp_variables["database_name"] = self.database_name
         response = await kernel.run_async(query_plugin["nlpToSql"], input_vars=nlp_variables)
         regex = re.compile(r"<<<(.*)>>>", re.DOTALL)
         query = None
