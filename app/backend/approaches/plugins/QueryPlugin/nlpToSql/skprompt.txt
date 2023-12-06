@@ -2,4 +2,4 @@
 #
 {{$table_descriptions}}
 #
-### Only the SQL query to find {{$input}} 
+### Provide the SQL Server query surrounded by <<< >>> to find {{$input}}

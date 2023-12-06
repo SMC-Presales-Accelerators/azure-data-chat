@@ -1,4 +1,4 @@
-import json
+import re
 import logging
 from typing import Any, AsyncGenerator, Optional, Union
 
@@ -77,8 +77,14 @@ class ChatReadRetrieveReadApproach(Approach):
         conn.close()
         return table_list
     
-    async def chat_response(self, query, query_result) -> any:
-        response = f"""{query_result}"""
+    async def chat_response(self, query_result, commentary) -> any:
+        response = ""
+        if commentary != None:
+            response = f"""{commentary}"""
+        if query_result != None:
+            if commentary != None:
+                response += "<br><br>"
+            response += f"""{query_result}"""
         return {
             "choices": [
                 {
@@ -170,7 +176,19 @@ class ChatReadRetrieveReadApproach(Approach):
         nlp_variables = sk.ContextVariables()
         nlp_variables["input"] = original_user_query
         nlp_variables["table_descriptions"] = await self.schema_detect()
-        query = await kernel.run_async(query_plugin["nlpToSql"], input_vars=nlp_variables)
+        response = await kernel.run_async(query_plugin["nlpToSql"], input_vars=nlp_variables)
+        regex = re.compile(r"<<<(.*)>>>", re.DOTALL)
+        query = None
+        query_re = re.search(regex, str(response))
+        if query_re == None:
+            query = "No query ran"
+        else:
+            query = query_re.group(1)
+        # Check if there is any other commentary to add to the query
+        response_formatted = str(response).replace("<<<", "<pre><code>").replace(">>>", "</code></pre>")
+        commentary = None
+        if response_formatted != "<pre><code>" + query + "</code></pre>":
+            commentary = response_formatted
 
         response_token_limit = 1024
         messages_token_limit = self.chatgpt_token_limit - response_token_limit
@@ -183,8 +201,9 @@ class ChatReadRetrieveReadApproach(Approach):
             max_tokens=messages_token_limit,
         )
         msg_to_display = "\n\n".join([str(message) for message in messages])
-
-        query_result = await self.get_result_from_database(str(query), top)
+        query_result = None
+        if query != "No query ran":
+            query_result = await self.get_result_from_database(str(query), top)
 
         extra_info = {
             "data_points": query_result,
@@ -192,7 +211,7 @@ class ChatReadRetrieveReadApproach(Approach):
             + msg_to_display.replace("\n", "<br>"),
         }
 
-        chat_coroutine = self.chat_response(query, query_result)
+        chat_coroutine = self.chat_response(query_result, commentary)
         return (extra_info, chat_coroutine)
 
     async def run_without_streaming(
