@@ -1,0 +1,5 @@
+### SQL SERVER SQL tables, with their properties:
+#
+{{$table_descriptions}}
+#
+### Only the T-SQL query to find {{$input}} 

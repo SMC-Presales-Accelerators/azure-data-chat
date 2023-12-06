@@ -1,0 +1,15 @@
+azure-identity
+quart
+quart-cors
+openai[datalib]
+tiktoken
+uvicorn
+aiohttp
+azure-monitor-opentelemetry
+opentelemetry-instrumentation-asgi
+opentelemetry-instrumentation-requests
+opentelemetry-instrumentation-aiohttp-client
+msal
+msal-extensions
+semantic_kernel
+pyodbc
