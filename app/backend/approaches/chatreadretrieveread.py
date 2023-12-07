@@ -129,7 +129,7 @@ class ChatReadRetrieveReadApproach(Approach):
                         break
                 output += "</table>"
         except Exception as e:
-            print(e)
+            logging.exception(str(e))
             return str(e)
         cursor.close()
         conn.close()
@@ -144,16 +144,6 @@ class ChatReadRetrieveReadApproach(Approach):
     ) -> tuple:
         top = overrides.get("top", 10)
         original_user_query = history[-1]["content"]
-
-        # STEP 1: Generate an optimized keyword search query based on the chat history and the last question
-        messages = self.get_messages_from_history(
-            system_prompt="None",
-            model_id=self.chatgpt_model,
-            history=history,
-            user_content=original_user_query,
-            max_tokens=self.chatgpt_token_limit - len(original_user_query),
-            few_shots=self.query_prompt_few_shots,
-        )
 
         # Initialize the kernel
         kernel = sk.Kernel()
@@ -175,10 +165,24 @@ class ChatReadRetrieveReadApproach(Approach):
             plugins_directory, "QueryPlugin"
         )
 
+        response_token_limit = 1024
+        messages_token_limit = self.chatgpt_token_limit - response_token_limit
+        messages = self.get_messages_from_history(
+            system_prompt="None",
+            model_id=self.chatgpt_model,
+            history=history,
+            # Model does not handle lengthy system messages well. Moving sources to latest user conversation to solve follow up questions prompt.
+            user_content=original_user_query,
+            max_tokens=messages_token_limit,
+        )
+
+        msg_to_display = "\n\n".join([str(message) for message in messages])
+
         nlp_variables = sk.ContextVariables()
         nlp_variables["input"] = original_user_query
         nlp_variables["table_descriptions"] = await self.schema_detect()
         nlp_variables["database_name"] = self.database_name
+        nlp_variables["history"] = msg_to_display
         response = await kernel.run_async(query_plugin["nlpToSql"], input_vars=nlp_variables)
         regex = re.compile(r"<<<(.*)>>>", re.DOTALL)
         query = None
@@ -193,17 +197,6 @@ class ChatReadRetrieveReadApproach(Approach):
         if response_formatted != "<pre><code>" + query + "</code></pre>":
             commentary = response_formatted
 
-        response_token_limit = 1024
-        messages_token_limit = self.chatgpt_token_limit - response_token_limit
-        messages = self.get_messages_from_history(
-            system_prompt="None",
-            model_id=self.chatgpt_model,
-            history=history,
-            # Model does not handle lengthy system messages well. Moving sources to latest user conversation to solve follow up questions prompt.
-            user_content=original_user_query,
-            max_tokens=messages_token_limit,
-        )
-        msg_to_display = "\n\n".join([str(message) for message in messages])
         query_result = None
         if query != "No query ran":
             query_result = await self.get_result_from_database(str(query), top)
@@ -224,7 +217,6 @@ class ChatReadRetrieveReadApproach(Approach):
         auth_claims: dict[str, Any],
         session_state: Any = None,
     ) -> dict[str, Any]:
-        print("Run sees:" + self.chatgpt_model)
         extra_info, chat_coroutine = await self.run_until_final_call(
             history, overrides, auth_claims, should_stream=False
         )
@@ -266,7 +258,6 @@ class ChatReadRetrieveReadApproach(Approach):
     ) -> Union[dict[str, Any], AsyncGenerator[dict[str, Any], None]]:
         overrides = context.get("overrides", {})
         auth_claims = context.get("auth_claims", {})
-        print("Run sees:" + self.chatgpt_model)
         async with aiohttp.ClientSession() as s:
             openai.aiosession.set(s)
             response = await self.run_without_streaming(messages, overrides, auth_claims, session_state)
@@ -279,17 +270,10 @@ class ChatReadRetrieveReadApproach(Approach):
         history: list[dict[str, str]],
         user_content: str,
         max_tokens: int,
-        few_shots=[],
     ) -> list:
         message_builder = MessageBuilder(system_prompt, model_id)
 
-        # Add examples to show the chat what responses we want. It will try to mimic any responses and make sure they match the rules laid out in the system message.
-        for shot in few_shots:
-            message_builder.append_message(shot.get("role"), shot.get("content"))
-
-        append_index = len(few_shots) + 1
-
-        message_builder.append_message(self.USER, user_content, index=append_index)
+        message_builder.append_message(self.USER, user_content)
         total_token_count = message_builder.count_tokens_for_message(message_builder.messages[-1])
 
         newest_to_oldest = list(reversed(history[:-1]))
@@ -298,6 +282,6 @@ class ChatReadRetrieveReadApproach(Approach):
             if (total_token_count + potential_message_count) > max_tokens:
                 logging.debug("Reached max tokens of %d, history will be truncated", max_tokens)
                 break
-            message_builder.append_message(message["role"], message["content"], index=append_index)
+            message_builder.append_message(message["role"], message["content"])
             total_token_count += potential_message_count
         return message_builder.messages

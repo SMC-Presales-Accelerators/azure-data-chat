@@ -17,6 +17,11 @@
             "defaultValue": ""
         },
         {
+            "name": "history",
+            "description": "chat history for context",
+            "defaultValue": ""
+        },
+        {
             "name": "database_name",
             "description": "Database name being used to generate the query",
             "defaultValue": ""
