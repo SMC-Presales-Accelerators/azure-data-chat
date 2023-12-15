@@ -39,7 +39,7 @@ CONFIG_AUTH_CLIENT = "auth_client"
 
 bp = Blueprint("routes", __name__, static_folder="static")
 
-basepath = os.getenv("DataChatBasePath", "/")
+basepath = os.getenv("DATA_CHAT_BASE_PATH", "/")
 
 @bp.route("/")
 async def index():
@@ -126,7 +126,7 @@ async def setup_clients():
     OPENAI_CHATGPT_MODEL = os.getenv("AZURE_OPENAI_CHATGPT_MODEL")
     OPENAI_EMB_MODEL = os.getenv("AZURE_OPENAI_EMB_MODEL_NAME", "text-embedding-ada-002")
     # Used with Azure OpenAI deployments
-    AZURE_OPENAI_SERVICE = os.getenv("AZURE_OPENAI_SERVICE")
+    AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
     AZURE_OPENAI_CHATGPT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHATGPT_DEPLOYMENT")
     AZURE_OPENAI_EMB_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMB_DEPLOYMENT")
     AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
@@ -171,7 +171,7 @@ async def setup_clients():
     #)
     current_app.config[CONFIG_CHAT_APPROACH] = ChatReadRetrieveReadApproach(
         OPENAI_HOST,
-        f"https://{AZURE_OPENAI_SERVICE}.openai.azure.com",
+        AZURE_OPENAI_ENDPOINT,
         AZURE_OPENAI_API_KEY,
         AZURE_OPENAI_CHATGPT_DEPLOYMENT,
         OPENAI_CHATGPT_MODEL,
