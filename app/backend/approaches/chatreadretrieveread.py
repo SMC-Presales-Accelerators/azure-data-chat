@@ -7,6 +7,9 @@ import openai
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 import pyodbc
+import os
+import time
+import tempfile
 
 from approaches.approach import Approach
 from core.messagebuilder import MessageBuilder
@@ -62,22 +65,32 @@ class ChatReadRetrieveReadApproach(Approach):
         self.database_name = get_database_name(connection_string)
 
     async def schema_detect(self) -> str:
-        conn = pyodbc.connect(self.connection_string)
+        folder = tempfile.gettempdir()
+        schema_cache_file = folder + "/schema.txt"
+        ts = time.time()
+        schema_ttl = 60 * 60 # 1 hour
+        if os.path.isfile(schema_cache_file) and ts - os.path.getmtime(schema_cache_file) < schema_ttl:
+            with open(schema_cache_file, "r") as f:
+                return f.read()
+        else:
+            conn = pyodbc.connect(self.connection_string)
 
-        cursor = conn.cursor()
-        table_list = ""
-        try:
-            cursor.execute(self.schema_query)
-            result = cursor.fetchall()
-            for table in result:
-                table_list += table[0] + "\n"
-        except:
+            cursor = conn.cursor()
+            table_list = ""
+            try:
+                cursor.execute(self.schema_query)
+                result = cursor.fetchall()
+                for table in result:
+                    table_list += table[0] + "\n"
+            except:
+                cursor.close()
+                conn.close()
+                return "No Tables Found"
             cursor.close()
             conn.close()
-            return "No Tables Found"
-        cursor.close()
-        conn.close()
-        return table_list
+            with open(schema_cache_file, "w") as f:
+                f.write(table_list)
+            return table_list
     
     async def chat_response(self, query_result, commentary) -> any:
         response = ""
