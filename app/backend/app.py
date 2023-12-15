@@ -39,10 +39,16 @@ CONFIG_AUTH_CLIENT = "auth_client"
 
 bp = Blueprint("routes", __name__, static_folder="static")
 
+basepath = os.getenv("DataChatBasePath", "/")
 
 @bp.route("/")
 async def index():
     return await bp.send_static_file("index.html")
+
+# Ridiculous work around to give the client a way to get the base path
+@bp.route("/basepath")
+async def get_basepath():
+    return jsonify({"basepath": basepath})
 
 
 # Empty page is recommended for login redirect to work.
@@ -60,28 +66,6 @@ async def favicon():
 @bp.route("/assets/<path:path>")
 async def assets(path):
     return await send_from_directory(Path(__file__).resolve().parent / "static" / "assets", path)
-
-@bp.route("/ask", methods=["POST"])
-async def ask():
-    if not request.is_json:
-        return jsonify({"error": "request must be json"}), 415
-    request_json = await request.get_json()
-    context = request_json.get("context", {})
-    auth_helper = current_app.config[CONFIG_AUTH_CLIENT]
-    context["auth_claims"] = await auth_helper.get_auth_claims_if_enabled(request.headers)
-    try:
-        approach = current_app.config[CONFIG_ASK_APPROACH]
-        # Workaround for: https://github.com/openai/openai-python/issues/371
-        async with aiohttp.ClientSession() as s:
-            openai.aiosession.set(s)
-            r = await approach.run(
-                request_json["messages"], context=context, session_state=request_json.get("session_state")
-            )
-        return jsonify(r)
-    except Exception as e:
-        logging.exception("Exception in /ask")
-        return jsonify({"error": str(e)}), 500
-
 
 async def format_as_ndjson(r: AsyncGenerator[dict, None]) -> AsyncGenerator[str, None]:
     async for event in r:
@@ -150,7 +134,7 @@ async def setup_clients():
     # Used only with non-Azure OpenAI deployments
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     OPENAI_ORGANIZATION = os.getenv("OPENAI_ORGANIZATION")
-    AZURE_USE_AUTHENTICATION = os.getenv("AZURE_USE_AUTHENTICATION", "").lower() == "true"
+    AZURE_USE_AUTHENTICATION = os.getenv("AZURE_USE_AUTHENTICATION", "").lower() == "false"
     AZURE_SERVER_APP_ID = os.getenv("AZURE_SERVER_APP_ID")
     AZURE_SERVER_APP_SECRET = os.getenv("AZURE_SERVER_APP_SECRET")
     AZURE_CLIENT_APP_ID = os.getenv("AZURE_CLIENT_APP_ID")

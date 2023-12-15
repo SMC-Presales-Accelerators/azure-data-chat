@@ -1,6 +1,6 @@
 const BACKEND_URI = "";
 
-import { ChatAppResponse, ChatAppResponseOrError, ChatAppRequest } from "./models";
+import { ChatAppResponse, ChatAppResponseOrError, ChatAppRequest, BasePath } from "./models";
 import { useLogin } from "../authConfig";
 
 function getHeaders(idToken: string | undefined): Record<string, string> {
@@ -17,8 +17,16 @@ function getHeaders(idToken: string | undefined): Record<string, string> {
     return headers;
 }
 
+export async function getBasePath(): Promise<BasePath> {
+    const response = await fetch(`basepath`);
+    if (!response.ok) {
+        throw new Error(`base path response was not ok: ${response.status}`);
+    }
+    return await response.json();
+}
+
 export async function askApi(request: ChatAppRequest, idToken: string | undefined): Promise<ChatAppResponse> {
-    const response = await fetch(`${BACKEND_URI}/ask`, {
+    const response = await fetch(`ask`, {
         method: "POST",
         headers: getHeaders(idToken),
         body: JSON.stringify(request)
@@ -33,7 +41,7 @@ export async function askApi(request: ChatAppRequest, idToken: string | undefine
 }
 
 export async function chatApi(request: ChatAppRequest, idToken: string | undefined): Promise<Response> {
-    return await fetch(`${BACKEND_URI}/chat`, {
+    return await fetch(`chat`, {
         method: "POST",
         headers: getHeaders(idToken),
         body: JSON.stringify(request)

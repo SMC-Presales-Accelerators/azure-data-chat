@@ -23,4 +23,5 @@ WORKDIR /app
 COPY --from=frontend /app/backend/static ./backend/static
 COPY --from=backend /app/backend .
 WORKDIR /app/backend
-CMD ["hypercorn", "main:app", "--bind", "0.0.0.0:8000"]
+RUN chmod +x run.sh
+CMD ["sh", "-c", "./run.sh"]
