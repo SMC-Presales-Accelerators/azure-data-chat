@@ -39,7 +39,7 @@ interface AuthSetup {
 
 // Fetch the auth setup JSON data from the API if not already cached
 async function fetchAuthSetup(): Promise<AuthSetup> {
-    const response = await fetch('/auth_setup');
+    const response = await fetch('auth_setup');
     if (!response.ok) {
         throw new Error(`auth setup response was not ok: ${response.status}`);
     }

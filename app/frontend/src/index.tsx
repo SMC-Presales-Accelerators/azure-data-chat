@@ -1,10 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { createHashRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { initializeIcons } from "@fluentui/react";
 import { MsalProvider } from '@azure/msal-react';
 import { PublicClientApplication, EventType, AccountInfo } from '@azure/msal-browser';
 import { msalConfig, useLogin } from './authConfig';
+import { getBasePath } from "./api";
 
 import "./index.css";
 
@@ -12,6 +13,7 @@ import Layout from "./pages/layout/Layout";
 import Chat from "./pages/chat/Chat";
 
 var layout;
+var basePath = await getBasePath();
 if (useLogin) {
     var msalInstance = new PublicClientApplication(msalConfig);
 
@@ -40,7 +42,7 @@ if (useLogin) {
 
 initializeIcons();
 
-const router = createHashRouter([
+const router = createBrowserRouter([
     {
         path: "/",
         element: layout,
@@ -55,7 +57,11 @@ const router = createHashRouter([
             }
         ]
     }
-]);
+], 
+{
+    basename: basePath.basepath,
+}
+);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
