@@ -17,11 +17,11 @@ RUN apt-get update && apt-get install -y curl gnupg2 && curl https://packages.mi
 
 # Stage 4: Run hypercorn
 FROM msodbc AS final
-EXPOSE 8000
 # ENV AZURE_OPENAI_CHATGPT_DEPLOYMENT="" AZURE_OPENAI_CHATGPT_DEPLOYMENT="" AZURE_OPENAI_CHATGPT_MODEL="" AZURE_OPENAI_RESOURCE_GROUP="" AZURE_OPENAI_SERVICE="" AZURE_OPENAI_API_KEY="" DATABASE_CONNECTION_STRING=""
 WORKDIR /app
 COPY --from=frontend /app/backend/static ./backend/static
 COPY --from=backend /app/backend .
 WORKDIR /app/backend
 RUN chmod +x run.sh
+EXPOSE 80
 CMD ["sh", "-c", "./run.sh"]
