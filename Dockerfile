@@ -23,5 +23,5 @@ COPY --from=frontend /app/backend/static ./backend/static
 COPY --from=backend /app/backend .
 WORKDIR /app/backend
 RUN chmod +x run.sh
-EXPOSE 80
+EXPOSE 8000
 CMD ["sh", "-c", "./run.sh"]
