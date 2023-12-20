@@ -1,0 +1,158 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.24.24.22086",
+      "templateHash": "8540841542107117208"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Specifies the location in which the Azure Storage resources should be deployed."
+      }
+    },
+    "website_name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name for the app service, this will be the beginning of the FQDN."
+      }
+    },
+    "database_connection_string": {
+      "type": "securestring",
+      "metadata": {
+        "description": "ODBC Connection string for the database you would like to chat with"
+      }
+    },
+    "database_connection_string_use_managed_identity": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Does your connection string use a Managed Identity?"
+      }
+    },
+    "openai_account_name": {
+      "type": "string",
+      "defaultValue": "[uniqueString(parameters('website_name'), 'openai')]",
+      "metadata": {
+        "description": "Account name for the OpenAI deployment"
+      }
+    },
+    "openai_deployment_name": {
+      "type": "string",
+      "defaultValue": "gpt35",
+      "metadata": {
+        "description": "OpenAI Deployment name for the model deployment."
+      }
+    }
+  },
+  "variables": {
+    "app_service_plan_name": "[uniqueString(parameters('website_name'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-10-01-preview",
+      "name": "[parameters('openai_account_name')]",
+      "kind": "OpenAI",
+      "location": "[parameters('location')]",
+      "properties": {
+        "customSubDomainName": "[parameters('openai_account_name')]",
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "ipRules": [],
+          "virtualNetworkRules": []
+        },
+        "publicNetworkAccess": "Enabled"
+      },
+      "sku": {
+        "name": "S0"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2023-10-01-preview",
+      "name": "[format('{0}/{1}', parameters('openai_account_name'), parameters('openai_deployment_name'))]",
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "gpt-35-turbo",
+          "version": "0301"
+        }
+      },
+      "sku": {
+        "capacity": 30,
+        "name": "Standard"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openai_account_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-09-01",
+      "name": "[variables('app_service_plan_name')]",
+      "kind": "linux",
+      "location": "[parameters('location')]",
+      "properties": {
+        "elasticScaleEnabled": false,
+        "hyperV": false,
+        "isSpot": false,
+        "isXenon": false,
+        "maximumElasticWorkerCount": 1,
+        "perSiteScaling": false,
+        "reserved": true,
+        "targetWorkerCount": 0,
+        "targetWorkerSizeId": 0,
+        "zoneRedundant": false
+      },
+      "sku": {
+        "capacity": 1,
+        "family": "Pv3",
+        "name": "P0v3",
+        "size": "P0v3",
+        "tier": "Premium0V3"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2020-06-01",
+      "name": "[parameters('website_name')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "[if(parameters('database_connection_string_use_managed_identity'), 'SystemAssigned', null())]"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('app_service_plan_name'))]",
+        "siteConfig": {
+          "linuxFxVersion": "DOCKER|ghcr.io/cbattlegear/azure-data-chat:latest"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('app_service_plan_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2020-06-01",
+      "name": "[format('{0}/{1}', parameters('website_name'), 'appsettings')]",
+      "properties": {
+        "AZURE_OPENAI_API_KEY": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', parameters('openai_account_name')), '2023-10-01-preview').key1]",
+        "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "[parameters('openai_deployment_name')]",
+        "AZURE_OPENAI_ENDPOINT": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openai_account_name')), '2023-10-01-preview').endpoint]",
+        "AZURE_OPENAI_CHATGPT_MODEL": "gpt-35-turbo",
+        "DOCKER_REGISTRY_SERVER_URL": "https://ghcr.io",
+        "DATABASE_CONNECTION_STRING": "[parameters('database_connection_string')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('website_name'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openai_account_name'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openai_account_name'), parameters('openai_deployment_name'))]"
+      ]
+    }
+  ]
+}
