@@ -1,0 +1,44 @@
+name: Generate ARM Template
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Install Bicep build
+        run: |
+          curl -Lo bicepinstall https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+          chmod +x ./bicepinstall
+          sudo mv ./bicepinstall /usr/local/bin/bicep
+          bicep --help
+      
+      - name: Run Bicep build
+        run: |
+          bicep build Deployment/main.bicep
+          ls -l Deployment/*.json
+          
+      - uses: EndBug/add-and-commit@v9
+        with:
+          author_name: github-actions
+          author_email: '41898282+github-actions[bot]@users.noreply.github.com'
+          message: Update Bicep Generated ARM Template
+          add: Deployment/main.json
