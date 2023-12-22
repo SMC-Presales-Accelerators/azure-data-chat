@@ -82,7 +82,7 @@ resource app_service 'Microsoft.Web/sites@2020-06-01' = {
   name: website_name
   location: location
   identity: {
-    type: database_connection_string_use_managed_identity ? 'SystemAssigned' : null
+    type: database_connection_string_use_managed_identity ? 'SystemAssigned' : 'None'
   }
   properties: {
     serverFarmId: app_service_plan.id
