@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.24.24.22086",
-      "templateHash": "8540841542107117208"
+      "templateHash": "1330285255131446248"
     }
   },
   "parameters": {
@@ -124,7 +124,7 @@
       "name": "[parameters('website_name')]",
       "location": "[parameters('location')]",
       "identity": {
-        "type": "[if(parameters('database_connection_string_use_managed_identity'), 'SystemAssigned', null())]"
+        "type": "[if(parameters('database_connection_string_use_managed_identity'), 'SystemAssigned', 'None')]"
       },
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('app_service_plan_name'))]",
