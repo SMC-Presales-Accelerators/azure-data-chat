@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.24.24.22086",
-      "templateHash": "1330285255131446248"
+      "templateHash": "17152037822656917530"
     }
   },
   "parameters": {
@@ -129,7 +129,7 @@
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('app_service_plan_name'))]",
         "siteConfig": {
-          "linuxFxVersion": "DOCKER|ghcr.io/cbattlegear/azure-data-chat:latest"
+          "linuxFxVersion": "DOCKER|docker.io/smcpresalesaccelerators/azure-data-chat:latest"
         }
       },
       "dependsOn": [
