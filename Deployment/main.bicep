@@ -87,7 +87,7 @@ resource app_service 'Microsoft.Web/sites@2020-06-01' = {
   properties: {
     serverFarmId: app_service_plan.id
     siteConfig: {
-      linuxFxVersion: 'DOCKER|ghcr.io/cbattlegear/azure-data-chat:latest'
+      linuxFxVersion: 'DOCKER|docker.io/smcpresalesaccelerators/azure-data-chat:latest'
     }
   }
 }
