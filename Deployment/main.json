@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.24.24.22086",
-      "templateHash": "17152037822656917530"
+      "version": "0.26.170.59819",
+      "templateHash": "2616183830401078730"
     }
   },
   "parameters": {
@@ -129,7 +129,7 @@
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('app_service_plan_name'))]",
         "siteConfig": {
-          "linuxFxVersion": "DOCKER|docker.io/smcpresalesaccelerators/azure-data-chat:latest"
+          "linuxFxVersion": "DOCKER|smcpresalesaccelerators/azure-data-chat:latest"
         }
       },
       "dependsOn": [
@@ -145,7 +145,6 @@
         "AZURE_OPENAI_CHATGPT_DEPLOYMENT": "[parameters('openai_deployment_name')]",
         "AZURE_OPENAI_ENDPOINT": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openai_account_name')), '2023-10-01-preview').endpoint]",
         "AZURE_OPENAI_CHATGPT_MODEL": "gpt-35-turbo",
-        "DOCKER_REGISTRY_SERVER_URL": "https://ghcr.io",
         "DATABASE_CONNECTION_STRING": "[parameters('database_connection_string')]"
       },
       "dependsOn": [
