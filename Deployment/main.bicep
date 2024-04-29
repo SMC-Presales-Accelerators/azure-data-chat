@@ -87,7 +87,7 @@ resource app_service 'Microsoft.Web/sites@2020-06-01' = {
   properties: {
     serverFarmId: app_service_plan.id
     siteConfig: {
-      linuxFxVersion: 'DOCKER|docker.io/smcpresalesaccelerators/azure-data-chat:latest'
+      linuxFxVersion: 'DOCKER|smcpresalesaccelerators/azure-data-chat:latest'
     }
   }
 }
@@ -100,7 +100,6 @@ resource app_service_config 'Microsoft.Web/sites/config@2020-06-01' = {
     AZURE_OPENAI_CHATGPT_DEPLOYMENT: openai_deployment.name
     AZURE_OPENAI_ENDPOINT: openai_account.properties.endpoint
     AZURE_OPENAI_CHATGPT_MODEL: 'gpt-35-turbo'
-    DOCKER_REGISTRY_SERVER_URL: 'https://ghcr.io'
     DATABASE_CONNECTION_STRING: database_connection_string
   }
 }
