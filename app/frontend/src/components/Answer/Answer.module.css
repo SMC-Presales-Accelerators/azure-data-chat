@@ -20,6 +20,12 @@
     white-space: pre-line;
 }
 
+.answerText > * {
+    margin-top: 0;
+    margin-bottom: 0;
+
+}
+
 .answerText table {
     border-collapse: collapse;
 }

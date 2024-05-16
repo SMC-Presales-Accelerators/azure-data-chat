@@ -1,36 +1,36 @@
 {
     "schema": 1,
-    "description": "NLP to SQL",
     "type": "completion",
-    "completion": {
-      "max_tokens": 400,
-      "temperature": 0,
-      "top_p": 0,
-      "presence_penalty": 0.0,
-      "frequency_penalty": 0.0
+    "description": "NLP to SQL",
+    "execution_settings": {
+      "default": {
+        "max_tokens": 3000,
+        "temperature": 0,
+        "top_p": 0,
+        "presence_penalty": 0.0,
+        "frequency_penalty": 0.0
+      }
     },
-    "input": {
-      "parameters": [
+    "input_variables": [
         {
             "name": "input",
             "description": "The natural language to turn into a T-SQL query",
-            "defaultValue": ""
+            "default": ""
         },
         {
             "name": "history",
             "description": "chat history for context",
-            "defaultValue": ""
+            "default": ""
         },
         {
             "name": "database_name",
             "description": "Database name being used to generate the query",
-            "defaultValue": ""
+            "default": ""
         },
         {
             "name": "table_descritpions",
             "description": "List of tables and columns, One table per line, CSV column list in () to use for your query generation",
-            "defaultValue": ""
+            "default": ""
         }
       ]
-    }
   }

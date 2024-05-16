@@ -6,6 +6,7 @@ import aiohttp
 import openai
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+from semantic_kernel.functions import KernelArguments
 import pyodbc
 import os
 import time
@@ -98,7 +99,7 @@ class ChatReadRetrieveReadApproach(Approach):
             response = f"""{commentary}"""
         if query_result != None:
             if commentary != None:
-                response += "<br><br>"
+                response += "\n### Results Returned\n"
             response += f"""{query_result}"""
         return {
             "choices": [
@@ -128,19 +129,27 @@ class ChatReadRetrieveReadApproach(Approach):
                         output += str(column)
             else:
                 row_count = 0
-                output += "<table><tr>"
+                column_count = 0
+                
+                output += "| "
                 for column in cursor.description:
-                    output += "<th>" + column[0] + "</th>"
-                output += "</tr>\n"
+                    output += column[0] + " | "
+                    column_count += 1
+                output += "\n"
+
+                output += "| "
+                for i in range(column_count):
+                    output += "--- | "
+                output += "\n"
+                
                 for row in cursor.fetchall():
-                    output += "<tr>"
+                    output += "| "
                     for column in row:
-                        output += "<td>" + str(column) + "</td>"
-                    output += "</tr>\n"
+                        output += str(column) + " | "
+                    output += "\n"
                     row_count += 1
                     if row_count >= row_limit:
                         break
-                output += "</table>"
         except Exception as e:
             logging.exception(str(e))
             return str(e)
@@ -161,21 +170,19 @@ class ChatReadRetrieveReadApproach(Approach):
         # Initialize the kernel
         kernel = sk.Kernel()
 
-        kernel = sk.Kernel(log=sk.NullLogger())
-        kernel.add_chat_service(
-            "chat_completion",
+        kernel.add_service(
             AzureChatCompletion(
-                self.chatgpt_deployment,
-                self.azure_openai_url,
-                self.azure_openai_key
+                service_id="chat_completion",
+                deployment_name=self.chatgpt_deployment,
+                endpoint=self.azure_openai_url,
+                api_key=self.azure_openai_key
             ),
         )
 
         plugins_directory = "./approaches/plugins"
 
-        # Import the WriterPlugin from the plugins directory.
-        query_plugin = kernel.import_semantic_skill_from_directory(
-            plugins_directory, "QueryPlugin"
+        query_plugin = kernel.add_plugin(
+            parent_directory=plugins_directory, plugin_name="QueryPlugin"
         )
 
         response_token_limit = 1024
@@ -189,14 +196,21 @@ class ChatReadRetrieveReadApproach(Approach):
             max_tokens=messages_token_limit,
         )
 
-        msg_to_display = "\n\n".join([str(message) for message in messages])
+        msg_to_display = "\n".join([str(message) for message in messages])
 
-        nlp_variables = sk.ContextVariables()
-        nlp_variables["input"] = original_user_query
-        nlp_variables["table_descriptions"] = await self.schema_detect()
-        nlp_variables["database_name"] = self.database_name
-        nlp_variables["history"] = msg_to_display
-        response = await kernel.run_async(query_plugin["nlpToSql"], input_vars=nlp_variables)
+        nlp_variables = KernelArguments(input=original_user_query, 
+                                        table_descriptions=await self.schema_detect(), 
+                                        database_name=self.database_name, 
+                                        history=msg_to_display)
+        #nlp_variables["input"] = original_user_query
+        #nlp_variables["table_descriptions"] = await self.schema_detect()
+        #nlp_variables["database_name"] = self.database_name
+        #nlp_variables["history"] = msg_to_display
+        #response = await kernel.invoke(query_plugin["nlpToSql"], input_vars=nlp_variables)
+        response = await kernel.invoke(query_plugin["nlpToSql"], input=original_user_query, 
+                                        table_descriptions=await self.schema_detect(), 
+                                        database_name=self.database_name, 
+                                        history=msg_to_display)
         regex = re.compile(r"<<<(.*)>>>", re.DOTALL)
         query = None
         query_re = re.search(regex, str(response))
@@ -204,10 +218,14 @@ class ChatReadRetrieveReadApproach(Approach):
             query = "No query ran"
         else:
             query = query_re.group(1)
+            logging.info(f"Query: {query}")
+            if query[0:3] == "sql":
+                query = query[3:]
         # Check if there is any other commentary to add to the query
-        response_formatted = str(response).replace("<<<", "<pre><code>").replace(">>>", "</code></pre>")
+        # Doing some extra clean up to get OpenAI's obsession with ``` code blocks to work
+        response_formatted = str(response).replace("```sql", "").replace("```", "").replace("<<<", "```sql\n").replace(">>>", "\n```")
         commentary = None
-        if response_formatted != "<pre><code>" + query + "</code></pre>":
+        if response_formatted != query:
             commentary = response_formatted
 
         query_result = None
@@ -272,7 +290,7 @@ class ChatReadRetrieveReadApproach(Approach):
         overrides = context.get("overrides", {})
         auth_claims = context.get("auth_claims", {})
         async with aiohttp.ClientSession() as s:
-            openai.aiosession.set(s)
+            # openai.aiosession.set(s)
             response = await self.run_without_streaming(messages, overrides, auth_claims, session_state)
         return response
 
