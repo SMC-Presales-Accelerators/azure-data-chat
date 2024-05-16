@@ -11,4 +11,4 @@ Conversation history (for reference only):
 {{$table_descriptions}}
 #
 ### The database name is: {{$database_name}}
-### Provide the SQL Server query surrounded by <<< >>> to find {{$input}}
+### Provide the SQL Server query surrounded by <<< >>> to find {{$input}}. For any extra descriptions or explanations format them in Markdown.

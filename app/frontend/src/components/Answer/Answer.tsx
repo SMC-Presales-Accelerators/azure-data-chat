@@ -1,11 +1,14 @@
 import { useMemo } from "react";
 import { Stack, IconButton } from "@fluentui/react";
 import DOMPurify from "dompurify";
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { vs } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 import styles from "./Answer.module.css";
 
 import { ChatAppResponse, getCitationFilePath } from "../../api";
-import { parseAnswerToHtml } from "./AnswerParser";
 import { AnswerIcon } from "./AnswerIcon";
 
 interface Props {
@@ -22,9 +25,6 @@ export const Answer = ({
     onThoughtProcessClicked,
 }: Props) => {
     const messageContent = answer.choices[0].message.content;
-    const parsedAnswer = useMemo(() => parseAnswerToHtml(messageContent, isStreaming), [answer]);
-
-    const sanitizedAnswerHtml = DOMPurify.sanitize(parsedAnswer.answerHtml);
 
     return (
         <Stack className={`${styles.answerContainer} ${isSelected && styles.selected}`} verticalAlign="space-between">
@@ -45,7 +45,31 @@ export const Answer = ({
             </Stack.Item>
 
             <Stack.Item grow>
-                <div className={styles.answerText} dangerouslySetInnerHTML={{ __html: sanitizedAnswerHtml }}></div>
+                <div className={styles.answerText}>
+                    <Markdown
+                        remarkPlugins={[remarkGfm]}
+                        children={messageContent}
+                        components={{
+                            code(props) {
+                                const {children, className, node, ...rest} = props
+                                const match = /language-(\w+)/.exec(className || '')
+                                return match ? (
+                                <SyntaxHighlighter
+                                    null
+                                    PreTag="div"
+                                    children={String(children).replace(/\n$/, '')}
+                                    language={match[1]}
+                                    style={vs}
+                                />
+                                ) : (
+                                <code {...rest} className={className}>
+                                    {children}
+                                </code>
+                                )
+                            }
+                        }}
+                    />
+                </div>
             </Stack.Item>
         </Stack>
     );
