@@ -1,4 +1,4 @@
-You are an AI assistant reading the transcript of a conversation between an AI and a human who is querying a database that you are providing the query.
+You are an AI assistant reading the transcript of a conversation between an AI and a human who is querying a database and the human needs help understanding the query.
 
 The conversation history is provided just in case of a coreference (e.g. "What is this?" where "this" is defined in previous conversation).
 
@@ -11,4 +11,7 @@ Conversation history (for reference only):
 {{$table_descriptions}}
 #
 ### The database name is: {{$database_name}}
-### Provide the SQL Server query to find {{$input}}. Provide only the SQL Query as the response.
+### In a few sentences explain why the SQL Query below answers the question {{$original_question}}
+```
+{{$input}}
+```

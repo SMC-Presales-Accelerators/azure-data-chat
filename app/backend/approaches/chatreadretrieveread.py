@@ -40,13 +40,6 @@ class ChatReadRetrieveReadApproach(Approach):
         GROUP BY t.TABLE_SCHEMA, t.TABLE_NAME
     """
 
-    query_prompt_few_shots = [
-        {"role": USER, "content": "What are my health plans?"},
-        {"role": ASSISTANT, "content": "Show available health plans"},
-        {"role": USER, "content": "does my plan cover cardio?"},
-        {"role": ASSISTANT, "content": "Health plan cardio coverage"},
-    ]
-
     def __init__(
         self,
         openai_host: str,
@@ -117,17 +110,20 @@ class ChatReadRetrieveReadApproach(Approach):
             ],
         }
 
-    async def get_result_from_database(self, sql_query: str, row_limit: int) -> str:
+    async def get_result_from_database(self, sql_query: str, row_limit: int) -> dict[str, Any]:
         conn = pyodbc.connect(self.connection_string)
         cursor = conn.cursor()
         output = ""
+        result_type = "error"
         try:
             cursor.execute(sql_query)
             if cursor.description[0][0] == '':
+                result_type = "scalar"
                 for row in cursor.fetchall():
                     for column in row:
                         output += str(column)
             else:
+                result_type = "table"
                 row_count = 0
                 column_count = 0
                 
@@ -152,10 +148,14 @@ class ChatReadRetrieveReadApproach(Approach):
                         break
         except Exception as e:
             logging.exception(str(e))
+            result_type = "error"
             return str(e)
         cursor.close()
         conn.close()
-        return output
+        return {
+            "result": output,
+            "type": result_type
+        }
 
     async def run_until_final_call(
         self,
@@ -198,47 +198,34 @@ class ChatReadRetrieveReadApproach(Approach):
 
         msg_to_display = "\n".join([str(message) for message in messages])
 
-        nlp_variables = KernelArguments(input=original_user_query, 
+        query_response = await kernel.invoke(query_plugin["nlpToSql"], input=original_user_query, 
                                         table_descriptions=await self.schema_detect(), 
                                         database_name=self.database_name, 
                                         history=msg_to_display)
-        #nlp_variables["input"] = original_user_query
-        #nlp_variables["table_descriptions"] = await self.schema_detect()
-        #nlp_variables["database_name"] = self.database_name
-        #nlp_variables["history"] = msg_to_display
-        #response = await kernel.invoke(query_plugin["nlpToSql"], input_vars=nlp_variables)
-        response = await kernel.invoke(query_plugin["nlpToSql"], input=original_user_query, 
+        
+        query_deformatted = str(query_response).replace("```sql", "").replace("```", "").strip()
+        
+        explanation_response = await kernel.invoke(query_plugin["explainSql"], input=str(query_deformatted), 
+                                        original_question=original_user_query,
                                         table_descriptions=await self.schema_detect(), 
                                         database_name=self.database_name, 
                                         history=msg_to_display)
-        regex = re.compile(r"<<<(.*)>>>", re.DOTALL)
-        query = None
-        query_re = re.search(regex, str(response))
-        if query_re == None:
-            query = "No query ran"
-        else:
-            query = query_re.group(1)
-            logging.info(f"Query: {query}")
-            if query[0:3] == "sql":
-                query = query[3:]
-        # Check if there is any other commentary to add to the query
-        # Doing some extra clean up to get OpenAI's obsession with ``` code blocks to work
-        response_formatted = str(response).replace("```sql", "").replace("```", "").replace("<<<", "```sql\n").replace(">>>", "\n```")
-        commentary = None
-        if response_formatted != query:
-            commentary = response_formatted
+
+        logging.info(f"Query Response: {query_deformatted}")
 
         query_result = None
-        if query != "No query ran":
-            query_result = await self.get_result_from_database(str(query), top)
+
+        query_result = await self.get_result_from_database(str(query_deformatted), top)
 
         extra_info = {
-            "data_points": query_result,
-            "thoughts": f"Query:<br>{query}<br><br>Conversations:<br>"
+            "data_points": query_result["result"],
+            "thoughts": f"Query:<br>{query_result}<br><br>Conversations:<br>"
             + msg_to_display.replace("\n", "<br>"),
         }
 
-        chat_coroutine = self.chat_response(query_result, commentary)
+        commentary = str(explanation_response) + "\n```sql\n" + str(query_deformatted) + "\n```"
+
+        chat_coroutine = self.chat_response(query_result["result"], commentary)
         return (extra_info, chat_coroutine)
 
     async def run_without_streaming(
