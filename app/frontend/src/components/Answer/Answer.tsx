@@ -1,6 +1,4 @@
-import { useMemo } from "react";
 import { Stack, IconButton } from "@fluentui/react";
-import DOMPurify from "dompurify";
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -66,6 +64,15 @@ export const Answer = ({
                                     {children}
                                 </code>
                                 )
+                            },
+
+                            table(props) {
+                                const {children, ...rest} = props
+                                return (
+                                    <table {...rest} className={styles.answerTable}>
+                                        {children}
+                                    </table>
+                                );
                             }
                         }}
                     />

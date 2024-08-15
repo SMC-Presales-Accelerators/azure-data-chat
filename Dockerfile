@@ -1,19 +1,22 @@
 # Stage 1: Build the frontend
-FROM node:18 AS frontend
+FROM node:22-alpine AS frontend
 WORKDIR /app/frontend
 COPY app/frontend .
 RUN npm install && npm run build
 
 # Stage 2: Install Python requirements and copy code
-FROM python:3.11 AS backend
+FROM python:3.12-alpine AS backend
 WORKDIR /app/backend
 COPY app/backend .
+RUN apk update
+RUN apk add gcc libc-dev g++ libffi-dev libxml2 unixodbc-dev curl
 RUN pip install --no-cache-dir -r requirements.txt
 
 
 # Stage 3: Install msodbc 18
 FROM backend AS msodbc
-RUN apt-get update && apt-get install -y curl gnupg2 && curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list && apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql18
+WORKDIR /app/msodbc
+RUN curl -O https://download.microsoft.com/download/7/6/d/76de322a-d860-4894-9945-f0cc5d6a45f8/msodbcsql18_18.4.1.1-1_amd64.apk && apk add --allow-untrusted msodbcsql18_18.4.1.1-1_amd64.apk
 
 # Stage 4: Run hypercorn
 FROM msodbc AS final
