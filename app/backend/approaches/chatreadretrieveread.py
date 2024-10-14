@@ -11,7 +11,9 @@ import pyodbc
 import os
 import time
 import tempfile
+import struct
 
+from azure.identity import DefaultAzureCredential
 from approaches.approach import Approach
 from core.messagebuilder import MessageBuilder
 from core.modelhelper import get_token_limit
@@ -58,6 +60,14 @@ class ChatReadRetrieveReadApproach(Approach):
         self.chatgpt_token_limit = get_token_limit(chatgpt_model)
         self.database_name = get_database_name(connection_string)
 
+    def get_conn(self):
+        credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
+        token_bytes = credential.get_token("https://database.windows.net/.default").token.encode("UTF-16-LE")
+        token_struct = struct.pack(f'<I{len(token_bytes)}s', len(token_bytes), token_bytes)
+        SQL_COPT_SS_ACCESS_TOKEN = 1256  # This connection option is defined by microsoft in msodbcsql.h
+        conn = pyodbc.connect(self.connection_string, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: token_struct})
+        return conn
+
     async def schema_detect(self) -> str:
         folder = tempfile.gettempdir()
         schema_cache_file = folder + "/schema.txt"
@@ -67,7 +77,7 @@ class ChatReadRetrieveReadApproach(Approach):
             with open(schema_cache_file, "r") as f:
                 return f.read()
         else:
-            conn = pyodbc.connect(self.connection_string)
+            conn = self.get_conn()
 
             cursor = conn.cursor()
             table_list = ""
@@ -111,7 +121,7 @@ class ChatReadRetrieveReadApproach(Approach):
         }
 
     async def get_result_from_database(self, sql_query: str, row_limit: int) -> dict[str, Any]:
-        conn = pyodbc.connect(self.connection_string)
+        conn = self.get_conn()
         cursor = conn.cursor()
         output = ""
         result_type = "error"
